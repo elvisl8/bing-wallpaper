@@ -27,6 +27,10 @@ be run manually:
   bing-wallpapers-YYYY-MM.zip on the 1st of each month. The
   current, still-running month is not listed: its zip does not
   exist yet, so the link would be dead.
+- Images live in monthly subfolders pics/YYYY-MM/ (the downloader
+  creates them automatically). Any legacy image still sitting
+  flat in pics/ is moved into its month subfolder on each run,
+  so the folder tidies itself up without a manual migration.
 """
 import calendar
 import os
@@ -121,13 +125,20 @@ def month_label(key: str) -> str:
     return f"{calendar.month_name[int(key[4:])]} {key[:4]}"
 
 
+def rel_url(p: Path) -> str:
+    """Path of an image below pics/, URL-quoted, keeping the
+    monthly subfolder: '2026-11/20261117_title.jpg'."""
+    return quote(p.relative_to(PICS).as_posix())
+
+
 def table_for(files) -> str:
     cells = []
     for p in files:
         date = f"{p.name[:4]}-{p.name[4:6]}-{p.name[6:8]}"
+        rel = rel_url(p)
         cells.append(
-            f"[![{date}](thumbs/{quote(p.name)})](pics/{quote(p.name)})"
-            f"<br>{date} [download 4k]({DL_BASE}{quote(p.name)})")
+            f"[![{date}](thumbs/{quote(p.name)})](pics/{rel})"
+            f"<br>{date} [download 4k]({DL_BASE}{rel})")
     rows = []
     for i in range(0, len(cells), COLS):
         chunk = cells[i:i + COLS]
@@ -140,7 +151,19 @@ def main() -> int:
     global DL_BASE
     DL_BASE = raw_base()
     THUMBS.mkdir(exist_ok=True)
-    files = sorted(PICS.glob("*.jpg"), reverse=True)
+    # Legacy tidy-up: move any image still flat in pics/ into its
+    # monthly subfolder pics/YYYY-MM/ (month taken from the
+    # YYYYMMDD filename prefix). Idempotent; an image already in
+    # place in the subfolder is never overwritten.
+    if PICS.exists():
+        for p in sorted(PICS.glob("*.jpg")):
+            if len(p.name) >= 6 and p.name[:6].isdigit():
+                target_dir = PICS / f"{p.name[:4]}-{p.name[4:6]}"
+                target = target_dir / p.name
+                if not target.exists():
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                    p.rename(target)
+    files = sorted(PICS.rglob("*.jpg"), reverse=True) if PICS.exists() else []
     for p in files:
         t = THUMBS / p.name
         if t.exists() and t.stat().st_size > 5_000:

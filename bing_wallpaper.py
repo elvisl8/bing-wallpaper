@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Download Bing daily wallpapers (4K UHD, falls back to 1080p).
 
+Images are stored in a monthly subfolder of the output directory,
+named YYYY-MM after the image's own date (created automatically),
+e.g. pics/2026-11/20261117_title.jpg.
+
 Usage:
     python bing_wallpaper.py            # today only
     python bing_wallpaper.py 8          # the last 8 days
@@ -54,8 +58,12 @@ def main() -> int:
     ok = 0
     for img in images:
         stem = safe(f"{img['startdate']}_{img.get('title', 'bing')}")
-        dest = out_dir / f"{stem}.jpg"
-        if dest.exists() and dest.stat().st_size > 50_000:
+        month_dir = out_dir / f"{img['startdate'][:4]}-{img['startdate'][4:6]}"
+        month_dir.mkdir(parents=True, exist_ok=True)
+        dest = month_dir / f"{stem}.jpg"
+        legacy = out_dir / f"{stem}.jpg"   # old flat layout, pre-subfolders
+        if (dest.exists() and dest.stat().st_size > 50_000) or \
+                (legacy.exists() and legacy.stat().st_size > 50_000):
             print(f"Skip (already exists): {dest.name}")
             ok += 1
             continue
