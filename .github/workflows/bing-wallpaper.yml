@@ -25,7 +25,7 @@ jobs:
 
       - name: Refresh latest.jpg
         run: |
-          latest=$(ls pics/*.jpg | sort | tail -n 1)
+          latest=$(find pics -type f -name '*.jpg' | sort | tail -n 1)
           cp "$latest" latest.jpg
           echo "latest: $latest"
 

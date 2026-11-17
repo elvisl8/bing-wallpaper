@@ -33,7 +33,7 @@ jobs:
       - name: Refresh gallery & latest.jpg
         run: |
           python3 make_gallery.py
-          latest=$(ls pics/*.jpg | sort | tail -n 1)
+          latest=$(find pics -type f -name '*.jpg' | sort | tail -n 1)
           cp "$latest" latest.jpg
 
       - name: Commit any backfilled images
@@ -57,7 +57,7 @@ jobs:
           fi
           KEY=$(echo "$TARGET" | tr -d '-')
           shopt -s nullglob
-          files=( pics/${KEY}*.jpg )
+          files=( pics/${TARGET}/*.jpg pics/${KEY}*.jpg )
           if [ ${#files[@]} -eq 0 ]; then
             echo "No images for $TARGET, skipping"
             exit 0
@@ -70,5 +70,5 @@ jobs:
           else
             gh release create "$TARGET" "bing-wallpapers-${TARGET}.zip" \
               --title "${title} Wallpapers (${#files[@]} images)" \
-              --notes "All Bing daily wallpapers for ${title}: ${#files[@]} images, 4K UHD (1080p fallback). The same files are also browsable in the pics/ folder."
+              --notes "All Bing daily wallpapers for ${title}: ${#files[@]} images, 4K UHD (1080p fallback). The same files are also browsable in the pics/${TARGET}/ folder."
           fi
